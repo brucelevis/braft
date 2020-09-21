@@ -851,11 +851,11 @@ TEST_F(LogStorageTest, configuration) {
     braft::ConfigurationEntry pair;
     configuration_manager->get(2 + 100000*5, &pair);
     ASSERT_EQ(2, pair.id.index);
-    LOG(NOTICE) << pair.conf;
+    LOG(INFO) << pair.conf;
 
     configuration_manager->get(2 + 100000*5 + 1, &pair);
     ASSERT_EQ(2+100000*5+1, pair.id.index);
-    LOG(NOTICE) << pair.conf;
+    LOG(INFO) << pair.conf;
 
     storage2->truncate_suffix(400000);
     configuration_manager->get(400000, &pair);
@@ -981,6 +981,18 @@ TEST_F(LogStorageTest, multi_read_single_modify_thread_safe) {
     }
     bthread_join(write_thread, NULL);
 
+    delete configuration_manager;
+    delete storage;
+    braft::FLAGS_raft_max_segment_size = saved_max_segment_size;
+}
+
+TEST_F(LogStorageTest, max_segment_size_illegal) {
+    int32_t saved_max_segment_size = braft::FLAGS_raft_max_segment_size;
+    braft::FLAGS_raft_max_segment_size = -1;
+    system("rm -rf ./data");
+    braft::SegmentLogStorage* storage = new braft::SegmentLogStorage("./data");
+    braft::ConfigurationManager* configuration_manager = new braft::ConfigurationManager;
+    ASSERT_EQ(-1, storage->init(configuration_manager));
     delete configuration_manager;
     delete storage;
     braft::FLAGS_raft_max_segment_size = saved_max_segment_size;
@@ -1212,7 +1224,7 @@ TEST_F(LogStorageTest, append_close_load_append_with_io_metric) {
     ASSERT_NE(0, metric.append_entry_time_us);
     ASSERT_NE(0, metric.sync_segment_time_us);
 
-    LOG(NOTICE) << metric;
+    LOG(INFO) << metric;
 
     delete storage;
     delete configuration_manager;

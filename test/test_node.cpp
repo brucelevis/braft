@@ -52,7 +52,7 @@ protected:
             braft::FLAGS_raft_enable_append_entries_cache = true;
             braft::FLAGS_raft_max_append_entries_cache_size = 8;
         }
-        LOG(NOTICE) << "Start unitests: " << GetParam();
+        LOG(INFO) << "Start unitests: " << GetParam();
         ::system("rm -rf data");
         ASSERT_EQ(0, braft::g_num_nodes.get_value());
     }
@@ -196,7 +196,7 @@ TEST_P(NodeTest, NoLeader) {
     cond.reset(1);
     follower->add_peer(peer3, NEW_ADDPEERCLOSURE(&cond, EPERM));
     cond.wait();
-    LOG(NOTICE) << "add peer " << peer3;
+    LOG(INFO) << "add peer " << peer3;
 
     // remove peer1
     braft::PeerId peer0;
@@ -207,7 +207,7 @@ TEST_P(NodeTest, NoLeader) {
     cond.reset(1);
     follower->remove_peer(peer0, NEW_REMOVEPEERCLOSURE(&cond, EPERM));
     cond.wait();
-    LOG(NOTICE) << "remove peer " << peer0;
+    LOG(INFO) << "remove peer " << peer0;
 }
 
 TEST_P(NodeTest, TripleNode) {
@@ -276,7 +276,7 @@ TEST_P(NodeTest, TripleNode) {
 
             channel.CallMethod(NULL, &cntl, NULL, NULL, NULL/*done*/);
 
-            LOG(NOTICE) << "http return: \n" << cntl.response_attachment();
+            LOG(INFO) << "http return: \n" << cntl.response_attachment();
         }
 
         {
@@ -286,7 +286,7 @@ TEST_P(NodeTest, TripleNode) {
 
             channel.CallMethod(NULL, &cntl, NULL, NULL, NULL/*done*/);
 
-            LOG(NOTICE) << "http return: \n" << cntl.response_attachment();
+            LOG(INFO) << "http return: \n" << cntl.response_attachment();
         }
     }
 
@@ -423,7 +423,7 @@ TEST_P(NodeTest, JoinNode) {
     peers.push_back(peer0);
     Cluster cluster("unittest", peers);
     ASSERT_EQ(0, cluster.start(peer0.addr));
-    LOG(NOTICE) << "start single cluster " << peer0;
+    LOG(INFO) << "start single cluster " << peer0;
 
     cluster.wait_leader();
 
@@ -453,7 +453,7 @@ TEST_P(NodeTest, JoinNode) {
     peer1.addr.port = 5006 + 1;
     peer1.idx = 0;
     ASSERT_EQ(0, cluster.start(peer1.addr, true));
-    LOG(NOTICE) << "start peer " << peer1;
+    LOG(INFO) << "start peer " << peer1;
     // wait until started successfully
     usleep(1000* 1000);
 
@@ -461,7 +461,7 @@ TEST_P(NodeTest, JoinNode) {
     cond.reset(1);
     leader->add_peer(peer1, NEW_ADDPEERCLOSURE(&cond, 0));
     cond.wait();
-    LOG(NOTICE) << "add peer " << peer1;
+    LOG(INFO) << "add peer " << peer1;
 
     cluster.ensure_same();
 
@@ -479,7 +479,7 @@ TEST_P(NodeTest, JoinNode) {
     // start peer2 after some seconds wait 
     sleep(2);
     ASSERT_EQ(0, cluster.start(peer2.addr, true));
-    LOG(NOTICE) << "start peer " << peer2;
+    LOG(INFO) << "start peer " << peer2;
 
     usleep(1000 * 1000L);
 
@@ -514,7 +514,7 @@ TEST_P(NodeTest, Leader_step_down_during_install_snapshot) {
     peers.push_back(peer0);
     Cluster cluster("unittest", peers, 1000);
     ASSERT_EQ(0, cluster.start(peer0.addr));
-    LOG(NOTICE) << "start single cluster " << peer0;
+    LOG(INFO) << "start single cluster " << peer0;
 
     cluster.wait_leader();
 
@@ -571,13 +571,13 @@ TEST_P(NodeTest, Leader_step_down_during_install_snapshot) {
     peer1.addr.port = 5006 + 1;
     peer1.idx = 0;
     ASSERT_EQ(0, cluster.start(peer1.addr, true));
-    LOG(NOTICE) << "start peer " << peer1;
+    LOG(INFO) << "start peer " << peer1;
     // wait until started successfully
     usleep(1000* 1000);
 
     // add peer1, leader step down while caught_up
     cond.reset(1);
-    LOG(NOTICE) << "add peer: " << peer1;
+    LOG(INFO) << "add peer: " << peer1;
     leader->add_peer(peer1, NEW_ADDPEERCLOSURE(&cond, EPERM));
     usleep(500 * 1000);
 
@@ -593,11 +593,11 @@ TEST_P(NodeTest, Leader_step_down_during_install_snapshot) {
             cntl.http_request().uri() = "/raft_stat/unittest";
             cntl.http_request().set_method(brpc::HTTP_METHOD_GET);
             channel.CallMethod(NULL, &cntl, NULL, NULL, NULL/* done*/);
-            LOG(NOTICE) << "http return: \n" << cntl.response_attachment();
+            LOG(INFO) << "http return: \n" << cntl.response_attachment();
         }
     }
 
-    LOG(NOTICE) << "leader " << leader->node_id() 
+    LOG(INFO) << "leader " << leader->node_id() 
                 << " step_down because of some error";
     butil::Status status;
     status.set_error(braft::ERAFTTIMEDOUT, "Majority of the group dies");
@@ -605,7 +605,7 @@ TEST_P(NodeTest, Leader_step_down_during_install_snapshot) {
     cond.wait(); 
     
     // add peer1 again, success 
-    LOG(NOTICE) << "add peer again: " << peer1;
+    LOG(INFO) << "add peer again: " << peer1;
     cond.reset(1);
     cluster.wait_leader();
     leader = cluster.leader();
@@ -917,6 +917,88 @@ TEST_P(NodeTest, RemoveLeader) {
     ASSERT_EQ(2, nodes.size());
 
     cluster.ensure_same();
+}
+
+TEST_P(NodeTest, restart_without_stable_meta) {
+    std::vector<braft::PeerId> peers;
+    for (int i = 0; i < 3; i++) {
+        braft::PeerId peer;
+        peer.addr.ip = butil::my_ip();
+        peer.addr.port = 5006 + i;
+        peer.idx = 0;
+
+        peers.push_back(peer);
+    }
+
+    // start cluster
+    Cluster cluster("unittest", peers);
+    for (size_t i = 0; i < peers.size(); i++) {
+        ASSERT_EQ(0, cluster.start(peers[i].addr));
+    }
+
+    // elect leader
+    cluster.wait_leader();
+    braft::Node* leader = cluster.leader();
+    ASSERT_TRUE(leader != NULL);
+    LOG(WARNING) << "leader is " << leader->node_id();
+
+    // apply something
+    bthread::CountdownEvent cond(10);
+    for (int i = 0; i < 10; i++) {
+        butil::IOBuf data;
+        char data_buf[128];
+        snprintf(data_buf, sizeof(data_buf), "hello: %d", i + 1);
+        data.append(data_buf);
+
+        braft::Task task;
+        task.data = &data;
+        task.done = NEW_APPLYCLOSURE(&cond, 0);
+        leader->apply(task);
+    }
+    cond.wait();
+
+    cluster.ensure_same();
+
+    std::vector<braft::Node*> nodes;
+    cluster.followers(&nodes);
+    ASSERT_EQ(2, nodes.size());
+
+    // stop follower
+    LOG(WARNING) << "stop follower";
+    butil::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
+    cluster.stop(follower_addr);
+
+    ::system(butil::string_printf("rm -rf ./data/%s/stable/*",
+                                 butil::endpoint2str(follower_addr).c_str()).c_str());
+
+    LOG(INFO) << "restart follower";
+    ASSERT_EQ(0, cluster.start(follower_addr));
+
+    bthread_usleep(1000*1000);
+    cluster.wait_leader();
+    leader = cluster.leader();
+    ASSERT_TRUE(leader != NULL);
+    LOG(INFO) << "leader is " << leader->node_id();
+
+    // apply something
+    cond.reset(10);
+    for (int i = 0; i < 10; i++) {
+        butil::IOBuf data;
+        char data_buf[128];
+        snprintf(data_buf, sizeof(data_buf), "hello: %d", i + 1);
+        data.append(data_buf);
+
+        braft::Task task;
+        task.data = &data;
+        task.done = NEW_APPLYCLOSURE(&cond, 0);
+        leader->apply(task);
+    }
+    cond.wait();
+
+    cluster.ensure_same();
+
+    LOG(WARNING) << "cluster stop";
+    cluster.stop_all();
 }
 
 TEST_P(NodeTest, PreVote) {
@@ -2514,7 +2596,7 @@ TEST_P(NodeTest, change_peers) {
     peers.push_back(peer0);
     Cluster cluster("unittest", peers);
     ASSERT_EQ(0, cluster.start(peer0.addr));
-    LOG(NOTICE) << "start single cluster " << peer0;
+    LOG(INFO) << "start single cluster " << peer0;
     cluster.wait_leader();
     braft::Node* leader = cluster.leader();
     bthread::CountdownEvent cond(10);
@@ -2564,7 +2646,7 @@ TEST_P(NodeTest, change_peers_add_multiple_node) {
     peers.push_back(peer0);
     Cluster cluster("unittest", peers);
     ASSERT_EQ(0, cluster.start(peer0.addr));
-    LOG(NOTICE) << "start single cluster " << peer0;
+    LOG(INFO) << "start single cluster " << peer0;
     cluster.wait_leader();
     braft::Node* leader = cluster.leader();
     bthread::CountdownEvent cond(10);
@@ -2617,7 +2699,7 @@ TEST_P(NodeTest, change_peers_steps_down_in_joint_consensus) {
     peers.push_back(peer0);
     Cluster cluster("unittest", peers);
     ASSERT_EQ(0, cluster.start(peer0.addr));
-    LOG(NOTICE) << "start single cluster " << peer0;
+    LOG(INFO) << "start single cluster " << peer0;
     cluster.wait_leader();
     braft::Node* leader = cluster.leader();
     bthread::CountdownEvent cond(10);
