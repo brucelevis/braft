@@ -112,7 +112,7 @@ public:
     // public user api
     //
     // init node
-    int init(const NodeOptions& options, bool force_init);
+    int init(const NodeOptions& options);
 
     // shutdown local replica
     // done is user defined function, maybe response to client or clean some resource

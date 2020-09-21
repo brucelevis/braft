@@ -234,7 +234,7 @@ TEST_F(SnapshotTest, copy) {
         ASSERT_EQ(storage1->set_file_system_adaptor(fs), 0);
     }
     ASSERT_EQ(0, storage1->init());
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // normal create writer
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
@@ -309,7 +309,7 @@ TEST_F(SnapshotTest, file_escapes_directory) {
         CHECK(file != NULL);
         delete file;
     }
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // normal create writer
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
@@ -517,7 +517,7 @@ TEST_F(SnapshotTest, filter_before_copy) {
         ASSERT_EQ(storage1->set_file_system_adaptor(fs), 0);
     }
     ASSERT_EQ(0, storage1->init());
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // normal create writer
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
@@ -678,7 +678,7 @@ TEST_F(SnapshotTest, snapshot_throttle_for_reading) {
     ASSERT_TRUE(throttle);
     ASSERT_EQ(storage1->set_snapshot_throttle(throttle), 0);
     ASSERT_EQ(0, storage1->init());
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // normal create writer
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
@@ -750,7 +750,7 @@ TEST_F(SnapshotTest, snapshot_throttle_for_writing) {
         ASSERT_EQ(storage1->set_file_system_adaptor(fs), 0);
     }
     ASSERT_EQ(0, storage1->init());
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // create writer1
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
@@ -842,7 +842,7 @@ TEST_F(SnapshotTest, snapshot_throttle_for_reading_without_enable_throttle) {
     ASSERT_TRUE(throttle);
     ASSERT_EQ(storage1->set_snapshot_throttle(throttle), 0);
     ASSERT_EQ(0, storage1->init());
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // normal create writer
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
@@ -921,7 +921,7 @@ TEST_F(SnapshotTest, snapshot_throttle_for_writing_without_enable_throttle) {
         ASSERT_EQ(storage1->set_file_system_adaptor(fs), 0);
     }
     ASSERT_EQ(0, storage1->init());
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // create writer1
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
@@ -1004,7 +1004,7 @@ TEST_F(SnapshotTest, dynamically_change_throttle_threshold) {
         ASSERT_EQ(storage1->set_file_system_adaptor(fs), 0);
     }
     ASSERT_EQ(0, storage1->init());
-    storage1->set_server_addr(butil::EndPoint(butil::my_ip(), 6006));
+    storage1->set_server_addr(braft::EndPoint(butil::my_hostname(), 6006));
     // create writer1
     braft::SnapshotWriter* writer1 = storage1->create();
     ASSERT_TRUE(writer1 != NULL);
