@@ -604,7 +604,6 @@ inline NodeOptions::NodeOptions()
 {}
 
 class NodeImpl;
-class LogManager;
 class Node {
 public:
     Node(const GroupId& group_id, const PeerId& peer_id);
