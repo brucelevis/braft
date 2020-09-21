@@ -448,7 +448,7 @@ int NodeImpl::bootstrap(const BootstrapOptions& options) {
     return 0;
 }
 
-int NodeImpl::init(const NodeOptions& options) {
+int NodeImpl::init(const NodeOptions& options, bool force_init) {
     _options = options;
 
     // check _server_id
@@ -542,7 +542,7 @@ int NodeImpl::init(const NodeOptions& options) {
 
     _conf.id = LogId();
     // if have log using conf in log, else using conf in options
-    if (_log_manager->last_log_index() > 0) {
+    if (_log_manager->last_log_index() > 0 && !force_init) {
         _log_manager->check_and_set_configuration(&_conf);
     } else {
         _conf.conf = _options.initial_conf;

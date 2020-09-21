@@ -27,7 +27,7 @@ DEFINE_int32(raft_do_snapshot_min_index_gap, 1,
              " last_snapshot_index is equal to or larger than this value");
 BRPC_VALIDATE_GFLAG(raft_do_snapshot_min_index_gap, brpc::PositiveInteger);
 
-class SaveSnapshotDone : public SaveSnapshotClosure {
+/*class SaveSnapshotDone : public SaveSnapshotClosure {
 public:
     SaveSnapshotDone(SnapshotExecutor* node, SnapshotWriter* writer, Closure* done);
     virtual ~SaveSnapshotDone();
@@ -42,7 +42,7 @@ private:
     SnapshotWriter* _writer;
     Closure* _done; // user done
     SnapshotMeta _meta;
-};
+};*/
 
 class InstallSnapshotDone : public LoadSnapshotClosure {
 public:

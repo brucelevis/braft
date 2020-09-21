@@ -604,6 +604,7 @@ inline NodeOptions::NodeOptions()
 {}
 
 class NodeImpl;
+class LogManager;
 class Node {
 public:
     Node(const GroupId& group_id, const PeerId& peer_id);
@@ -631,7 +632,7 @@ public:
     void get_leader_lease_status(LeaderLeaseStatus* status);
 
     // init node
-    int init(const NodeOptions& options);
+    int init(const NodeOptions& options, bool force_init = false);
 
     // shutdown local replica.
     // done is user defined function, maybe response to client or clean some resource

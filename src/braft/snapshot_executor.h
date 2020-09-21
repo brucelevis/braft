@@ -174,6 +174,25 @@ inline SnapshotExecutorOptions::SnapshotExecutorOptions()
     , usercode_in_pthread(false)
 {}
 
+class SaveSnapshotDone : public SaveSnapshotClosure {
+public:
+    SaveSnapshotDone(SnapshotExecutor* node, SnapshotWriter* writer, Closure* done);
+    virtual ~SaveSnapshotDone();
+
+    SnapshotWriter* start(const SnapshotMeta& meta);
+    virtual void Run();
+
+    SnapshotMeta& get_meta() { return _meta; }
+ 
+private:
+    static void* continue_run(void* arg);
+
+    SnapshotExecutor* _se;
+    SnapshotWriter* _writer;
+    Closure* _done; // user done
+    SnapshotMeta _meta;
+};
+
 }  //  namespace braft
 
 #endif  // BRAFT_SNAPSHOT_EXECUTOR_H

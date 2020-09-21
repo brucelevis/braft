@@ -28,6 +28,7 @@
 #include "braft/raft_meta.h"
 #include "braft/snapshot.h"
 #include "braft/fsm_caller.h"            // IteratorImpl
+#include "braft/log_manager.h"
 
 namespace braft {
 
@@ -166,8 +167,8 @@ void Node::get_leader_lease_status(LeaderLeaseStatus* status) {
     return _impl->get_leader_lease_status(status);
 }
 
-int Node::init(const NodeOptions& options) {
-    return _impl->init(options);
+int Node::init(const NodeOptions& options, bool force_init) {
+    return _impl->init(options, force_init);
 }
 
 void Node::shutdown(Closure* done) {
