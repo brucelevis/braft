@@ -532,6 +532,9 @@ int FileBasedSingleMetaStorage::save() {
     StablePBMeta meta;
     meta.set_term(_term);
     meta.set_votedfor(_votedfor.to_string());
+    if (_votedfor.to_string() == ":0:0") {
+        meta.set_votedfor("0.0.0.0:0:0");
+    }
 
     std::string path(_path);
     path.append("/");

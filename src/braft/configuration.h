@@ -101,6 +101,9 @@ struct PeerId {
             return -1;
         }
         addr.hostname.resize(strlen(addr.hostname.c_str()));
+        if (addr.hostname == "0.0.0.0") {
+            addr.hostname = "";
+        }
         return 0;
     }
 
