@@ -75,12 +75,12 @@ TEST_P(NodeTest, InitShutdown) {
     ASSERT_EQ(0, server.Start("0.0.0.0:5006", NULL));
 
     braft::NodeOptions options;
-    options.fsm = new MockFSM(butil::EndPoint());
+    options.fsm = new MockFSM(braft::EndPoint());
     options.log_uri = "local://./data/log";
     options.raft_meta_uri = "local://./data/raft_meta";
     options.snapshot_uri = "local://./data/snapshot";
 
-    braft::Node node("unittest", braft::PeerId(butil::EndPoint(butil::my_ip(), 5006), 0));
+    braft::Node node("unittest", braft::PeerId(braft::EndPoint(butil::my_ip(), 5006), 0));
     ASSERT_EQ(0, node.init(options));
 
     node.shutdown(NULL);
@@ -123,7 +123,7 @@ TEST_P(NodeTest, SingleNode) {
     braft::NodeOptions options;
     options.election_timeout_ms = 300;
     options.initial_conf = braft::Configuration(peers);
-    options.fsm = new MockFSM(butil::EndPoint());
+    options.fsm = new MockFSM(braft::EndPoint());
     options.log_uri = "local://./data/log";
     options.raft_meta_uri = "local://./data/raft_meta";
     options.snapshot_uri = "local://./data/snapshot";
@@ -338,7 +338,7 @@ TEST_P(NodeTest, LeaderFail) {
     cond.wait();
 
     // stop leader
-    butil::EndPoint old_leader = leader->node_id().peer_id.addr;
+    braft::EndPoint old_leader = leader->node_id().peer_id.addr;
     LOG(WARNING) << "stop leader " << leader->node_id();
     cluster.stop(leader->node_id().peer_id.addr);
 
@@ -665,7 +665,7 @@ TEST_P(NodeTest, Report_error_during_install_snapshot) {
 
     // stop follower
     LOG(WARNING) << "stop follower";
-    butil::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
+    braft::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
     cluster.stop(follower_addr);
 
     // apply something
@@ -767,7 +767,7 @@ TEST_P(NodeTest, RemoveFollower) {
     ASSERT_EQ(2, nodes.size());
 
     const braft::PeerId follower_id = nodes[0]->node_id().peer_id;
-    const butil::EndPoint follower_addr = follower_id.addr;
+    const braft::EndPoint follower_addr = follower_id.addr;
     // stop follower
     LOG(WARNING) << "stop and clean follower " << follower_addr;
     cluster.stop(follower_addr);
@@ -862,7 +862,7 @@ TEST_P(NodeTest, RemoveLeader) {
     }
     cond.wait();
 
-    butil::EndPoint old_leader_addr = leader->node_id().peer_id.addr;
+    braft::EndPoint old_leader_addr = leader->node_id().peer_id.addr;
     LOG(WARNING) << "remove leader " << old_leader_addr;
     cond.reset(1);
     leader->remove_peer(leader->node_id().peer_id, NEW_REMOVEPEERCLOSURE(&cond, 0));
@@ -965,11 +965,11 @@ TEST_P(NodeTest, restart_without_stable_meta) {
 
     // stop follower
     LOG(WARNING) << "stop follower";
-    butil::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
+    braft::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
     cluster.stop(follower_addr);
 
     ::system(butil::string_printf("rm -rf ./data/%s/stable/*",
-                                 butil::endpoint2str(follower_addr).c_str()).c_str());
+                                 braft::EndPoint2str(follower_addr).c_str()).c_str());
 
     LOG(INFO) << "restart follower";
     ASSERT_EQ(0, cluster.start(follower_addr));
@@ -1044,7 +1044,7 @@ TEST_P(NodeTest, PreVote) {
     cluster.followers(&nodes);
     ASSERT_EQ(2, nodes.size());
     const braft::PeerId follower_id = nodes[0]->node_id().peer_id;
-    const butil::EndPoint follower_addr = follower_id.addr;
+    const braft::EndPoint follower_addr = follower_id.addr;
 
     const int64_t saved_term = leader->_impl->_current_term;
     //remove follower
@@ -1122,7 +1122,7 @@ TEST_P(NodeTest, Vote_timedout) {
     cluster.followers(&nodes);
     ASSERT_FALSE(nodes.empty());
     // stop follower, only one node left 
-    const butil::EndPoint follower_addr = nodes[0]->_impl->_server_id.addr;
+    const braft::EndPoint follower_addr = nodes[0]->_impl->_server_id.addr;
     cluster.stop(follower_addr);
     
     // wait old leader to step down 
@@ -1186,7 +1186,7 @@ TEST_P(NodeTest, SetPeer2) {
     cluster.wait_leader();
     braft::Node* leader = cluster.leader();
     ASSERT_TRUE(leader != NULL);
-    butil::EndPoint leader_addr = leader->node_id().peer_id.addr;
+    braft::EndPoint leader_addr = leader->node_id().peer_id.addr;
     LOG(WARNING) << "leader is " << leader->node_id();
     std::cout << "Here" << std::endl;
 
@@ -1314,7 +1314,7 @@ TEST_P(NodeTest, RestoreSnapshot) {
     braft::Node* leader = cluster.leader();
     ASSERT_TRUE(leader != NULL);
     LOG(WARNING) << "leader is " << leader->node_id();
-    butil::EndPoint leader_addr = leader->node_id().peer_id.addr;
+    braft::EndPoint leader_addr = leader->node_id().peer_id.addr;
 
     // apply something
     bthread::CountdownEvent cond(10);
@@ -1400,7 +1400,7 @@ TEST_P(NodeTest, InstallSnapshot) {
 
     // stop follower
     LOG(WARNING) << "stop follower";
-    butil::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
+    braft::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
     cluster.stop(follower_addr);
 
     // apply something
@@ -1503,8 +1503,8 @@ TEST_P(NodeTest, install_snapshot_exceed_max_task_num) {
 
     // stop follower
     LOG(WARNING) << "stop follower";
-    butil::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
-    butil::EndPoint follower_addr2 = nodes[1]->node_id().peer_id.addr;
+    braft::EndPoint follower_addr = nodes[0]->node_id().peer_id.addr;
+    braft::EndPoint follower_addr2 = nodes[1]->node_id().peer_id.addr;
     cluster.stop(follower_addr);
     cluster.stop(follower_addr2);
 
@@ -1580,7 +1580,7 @@ TEST_P(NodeTest, NoSnapshot) {
     braft::NodeOptions options;
     options.election_timeout_ms = 300;
     options.initial_conf = braft::Configuration(peers);
-    options.fsm = new MockFSM(butil::EndPoint());
+    options.fsm = new MockFSM(braft::EndPoint());
     options.log_uri = "local://./data/log";
     options.raft_meta_uri = "local://./data/raft_meta";
 
@@ -1637,7 +1637,7 @@ TEST_P(NodeTest, AutoSnapshot) {
     braft::NodeOptions options;
     options.election_timeout_ms = 300;
     options.initial_conf = braft::Configuration(peers);
-    options.fsm = new MockFSM(butil::EndPoint());
+    options.fsm = new MockFSM(braft::EndPoint());
     options.log_uri = "local://./data/log";
     options.raft_meta_uri = "local://./data/raft_meta";
     options.snapshot_uri = "local://./data/snapshot";
@@ -1736,7 +1736,7 @@ TEST_P(NodeTest, RecoverFollower) {
     std::vector<braft::Node*> nodes;
     cluster.followers(&nodes);
     ASSERT_FALSE(nodes.empty());
-    const butil::EndPoint follower_addr = nodes[0]->_impl->_server_id.addr;
+    const braft::EndPoint follower_addr = nodes[0]->_impl->_server_id.addr;
     cluster.stop(follower_addr);
 
     // apply something
@@ -1934,7 +1934,7 @@ TEST_P(NodeTest, leader_transfer_resume_on_failure) {
 
 class MockFSM1 : public MockFSM {
 protected:
-    MockFSM1() : MockFSM(butil::EndPoint()) {}
+    MockFSM1() : MockFSM(braft::EndPoint()) {}
     virtual int on_snapshot_load(braft::SnapshotReader* reader) {
         (void)reader;
         return -1;
@@ -2158,7 +2158,7 @@ TEST_P(NodeTest, append_entries_when_follower_is_in_error_state) {
     std::vector<braft::Node*> nodes;
     cluster.followers(&nodes);
     ASSERT_EQ(nodes.size(), 4);
-    butil::EndPoint error_follower = nodes[0]->node_id().peer_id.addr;
+    braft::EndPoint error_follower = nodes[0]->node_id().peer_id.addr;
     braft::Node* error_follower_node = nodes[0];
     LOG(WARNING) << "set follower error " << nodes[0]->node_id();
     braft::NodeImpl *node_impl = nodes[0]->_impl;
@@ -2170,7 +2170,7 @@ TEST_P(NodeTest, append_entries_when_follower_is_in_error_state) {
     node_impl->Release();
 
     // increase term  by stopping leader and electing a new leader again
-    butil::EndPoint old_leader = leader->node_id().peer_id.addr;
+    braft::EndPoint old_leader = leader->node_id().peer_id.addr;
     LOG(WARNING) << "stop leader " << leader->node_id();
     cluster.stop(old_leader);
     // elect new leader
@@ -2264,7 +2264,7 @@ TEST_P(NodeTest, on_start_following_and_on_stop_following) {
     }
 
     // stop old leader and elect a new one
-    butil::EndPoint leader_first_endpoint = leader_first->node_id().peer_id.addr;
+    braft::EndPoint leader_first_endpoint = leader_first->node_id().peer_id.addr;
     LOG(WARNING) << "stop leader_first " << leader_first->node_id();
     cluster.stop(leader_first_endpoint);
     // elect new leader
@@ -2515,7 +2515,7 @@ TEST_P(NodeTest, read_committed_user_log) {
 }
 
 TEST_P(NodeTest, boostrap_with_snapshot) {
-    butil::EndPoint addr;
+    braft::EndPoint addr;
     ASSERT_EQ(0, butil::str2endpoint("127.0.0.1:5006", &addr));
     MockFSM fsm(addr);
     for (char c = 'a'; c <= 'z'; ++c) {
@@ -2557,7 +2557,7 @@ TEST_P(NodeTest, boostrap_with_snapshot) {
 }
 
 TEST_P(NodeTest, boostrap_without_snapshot) {
-    butil::EndPoint addr;
+    braft::EndPoint addr;
     ASSERT_EQ(0, butil::str2endpoint("127.0.0.1:5006", &addr));
     braft::BootstrapOptions boptions;
     boptions.last_log_index = 0;

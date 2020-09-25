@@ -28,7 +28,6 @@
 #include "braft/raft_meta.h"
 #include "braft/snapshot.h"
 #include "braft/fsm_caller.h"            // IteratorImpl
-#include "braft/log_manager.h"
 
 namespace braft {
 
@@ -87,19 +86,20 @@ void global_init_once_or_die() {
     }
 }
 
-int add_service(brpc::Server* server, const butil::EndPoint& listen_addr) {
+int add_service(brpc::Server* server, const EndPoint& listen_addr) {
     global_init_once_or_die();
     return global_node_manager->add_service(server, listen_addr);
 }
 
 int add_service(brpc::Server* server, int port) {
-    butil::EndPoint addr(butil::IP_ANY, port);
+    EndPoint addr("", port);
     return add_service(server, addr);
 }
 
 int add_service(brpc::Server* server, const char* listen_ip_and_port) {
-    butil::EndPoint addr;
-    if (butil::str2endpoint(listen_ip_and_port, &addr) != 0) {
+    EndPoint addr;
+    addr.hostname.resize(strlen(listen_ip_and_port));
+    if(1 > sscanf(listen_ip_and_port, "%[^:]%*[:]%d", &*addr.hostname.begin(), &addr.port)){
         LOG(ERROR) << "Fail to parse `" << listen_ip_and_port << "'";
         return -1;
     }
@@ -167,8 +167,8 @@ void Node::get_leader_lease_status(LeaderLeaseStatus* status) {
     return _impl->get_leader_lease_status(status);
 }
 
-int Node::init(const NodeOptions& options, bool force_init) {
-    return _impl->init(options, force_init);
+int Node::init(const NodeOptions& options) {
+    return _impl->init(options);
 }
 
 void Node::shutdown(Closure* done) {
