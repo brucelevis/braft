@@ -989,6 +989,7 @@ void* Replicator::_send_heartbeat(void* arg) {
             return NULL;
         }
         r->_channel_init_ok = true;
+        r->_send_empty_entries(false);
     }
     
     // id is unlock in _send_empty_entries;
