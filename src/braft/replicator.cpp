@@ -139,22 +139,22 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
         return -1;
     }
 
-    if (dns_ok) {
-        // bind lifecycle with node, AddRef
-        // Replicator stop is async
-        options.node->AddRef();
-        options.replicator_status->AddRef();
+    // bind lifecycle with node, AddRef
+    // Replicator stop is async
+    options.node->AddRef();
+    options.replicator_status->AddRef();
 
-        bthread_id_lock(r->_id, NULL);
-        if (id) {
-            *id = r->_id.value;
-        }
-        LOG(INFO) << "Replicator=" << r->_id << "@" << r->_options.peer_id << " is started"
-                  << ", group " << r->_options.group_id;
-        r->_catchup_closure = NULL;
-        r->_update_last_rpc_send_timestamp(butil::monotonic_time_ms());
-        r->_start_heartbeat_timer(butil::gettimeofday_us());
-        // Note: r->_id is unlock in _send_empty_entries, don't touch r ever after
+    bthread_id_lock(r->_id, NULL);
+    if (id) {
+        *id = r->_id.value;
+    }
+    LOG(INFO) << "Replicator=" << r->_id << "@" << r->_options.peer_id << " is started"
+              << ", group " << r->_options.group_id;
+    r->_catchup_closure = NULL;
+    r->_update_last_rpc_send_timestamp(butil::monotonic_time_ms());
+    r->_start_heartbeat_timer(butil::gettimeofday_us());
+    // Note: r->_id is unlock in _send_empty_entries, don't touch r ever after
+    if (dns_ok) {
         r->_send_empty_entries(false);
     }
     
