@@ -254,9 +254,6 @@ private:
     bthread_timer_t _heartbeat_timer;
     SnapshotReader* _reader;
     CatchupClosure *_catchup_closure;
-
-    //for hostname
-    bool _dns_ok;
 };
 
 struct ReplicatorGroupOptions {
