@@ -84,6 +84,7 @@ Replicator::Replicator()
     , _is_waiter_canceled(false)
     , _reader(NULL)
     , _catchup_closure(NULL)
+    , _channel_init_ok(false)
 {
     _install_snapshot_in_fly.value = 0;
     _heartbeat_in_fly.value = 0;
@@ -116,7 +117,6 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
     //befor channel init, do one shot dns
     butil::EndPoint point;
     bool dns_ok = butil::hostname2endpoint(options.peer_id.addr.to_string().c_str(), &point) == 0;
-
     if (dns_ok) {
         brpc::ChannelOptions channel_opt;
         //channel_opt.connect_timeout_ms = *options.heartbeat_timeout_ms;
@@ -127,6 +127,7 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
             delete r;
             return -1;
         }
+        r->_channel_init_ok = true;
     }
 
     r->_options = options;
@@ -138,22 +139,25 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
         return -1;
     }
 
-    // bind lifecycle with node, AddRef
-    // Replicator stop is async
-    options.node->AddRef();
-    options.replicator_status->AddRef();
+    if (dns_ok) {
+        // bind lifecycle with node, AddRef
+        // Replicator stop is async
+        options.node->AddRef();
+        options.replicator_status->AddRef();
 
-    bthread_id_lock(r->_id, NULL);
-    if (id) {
-        *id = r->_id.value;
+        bthread_id_lock(r->_id, NULL);
+        if (id) {
+            *id = r->_id.value;
+        }
+        LOG(INFO) << "Replicator=" << r->_id << "@" << r->_options.peer_id << " is started"
+                  << ", group " << r->_options.group_id;
+        r->_catchup_closure = NULL;
+        r->_update_last_rpc_send_timestamp(butil::monotonic_time_ms());
+        r->_start_heartbeat_timer(butil::gettimeofday_us());
+        // Note: r->_id is unlock in _send_empty_entries, don't touch r ever after
+        r->_send_empty_entries(false);
     }
-    LOG(INFO) << "Replicator=" << r->_id << "@" << r->_options.peer_id << " is started"
-              << ", group " << r->_options.group_id;
-    r->_catchup_closure = NULL;
-    r->_update_last_rpc_send_timestamp(butil::monotonic_time_ms());
-    r->_start_heartbeat_timer(butil::gettimeofday_us());
-    // Note: r->_id is unlock in _send_empty_entries, don't touch r ever after
-    r->_send_empty_entries(false);
+    
     return 0;
 }
 
@@ -977,17 +981,16 @@ void* Replicator::_send_heartbeat(void* arg) {
         return NULL;
     }
 
-    butil::EndPoint point;
-    bool dns_ok = butil::hostname2endpoint(r->_options.peer_id.addr.to_string().c_str(), &point) == 0;
-    if (!dns_ok) {
+    if (!r->_channel_init_ok) {
         brpc::ChannelOptions channel_opt;
         channel_opt.timeout_ms = -1; // We don't need RPC timeout
         if (r->_sending_channel.Init(r->_options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
             LOG(INFO) << "Replicator::_send_heartbeat " << r->_options.peer_id.addr.to_string();
             return NULL;
         }
+        r->_channel_init_ok = true;
     }
-
+    
     // id is unlock in _send_empty_entries;
     r->_send_empty_entries(true);
     return NULL;

@@ -254,6 +254,9 @@ private:
     bthread_timer_t _heartbeat_timer;
     SnapshotReader* _reader;
     CatchupClosure *_catchup_closure;
+
+    //for hostname
+    bool _channel_init_ok;
 };
 
 struct ReplicatorGroupOptions {
