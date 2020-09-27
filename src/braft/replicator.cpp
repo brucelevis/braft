@@ -156,6 +156,8 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
     // Note: r->_id is unlock in _send_empty_entries, don't touch r ever after
     if (dns_ok) {
         r->_send_empty_entries(false);
+    } else {
+        CHECK_EQ(0, bthread_id_unlock(r->_id)) << "Fail to unlock " << r->_id;
     }
     
     return 0;
@@ -556,7 +558,7 @@ int Replicator::_fill_common_fields(AppendEntriesRequest* request,
     return 0;
 }
 
-void Replicator::_send_empty_entries(bool is_heartbeat) {
+void Replicator::_send_empty_entries(bool is_heartbeat, bool unlock) {
     std::unique_ptr<brpc::Controller> cntl(new brpc::Controller);
     std::unique_ptr<AppendEntriesRequest> request(new AppendEntriesRequest);
     std::unique_ptr<AppendEntriesResponse> response(new AppendEntriesResponse);
@@ -595,7 +597,9 @@ void Replicator::_send_empty_entries(bool is_heartbeat) {
     RaftService_Stub stub(&_sending_channel);
     stub.append_entries(cntl.release(), request.release(), 
                         response.release(), done);
-    CHECK_EQ(0, bthread_id_unlock(_id)) << "Fail to unlock " << _id;
+    if (unlock) {
+        CHECK_EQ(0, bthread_id_unlock(_id)) << "Fail to unlock " << _id;
+    }
 }
 
 int Replicator::_prepare_entry(int offset, EntryMeta* em, butil::IOBuf *data) {
@@ -986,10 +990,11 @@ void* Replicator::_send_heartbeat(void* arg) {
         channel_opt.timeout_ms = -1; // We don't need RPC timeout
         if (r->_sending_channel.Init(r->_options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
             LOG(INFO) << "Replicator::_send_heartbeat " << r->_options.peer_id.addr.to_string();
+            CHECK_EQ(0, bthread_id_unlock(r->_id)) << "Fail to unlock " << r->_id;
             return NULL;
         }
         r->_channel_init_ok = true;
-        r->_send_empty_entries(false);
+        r->_send_empty_entries(false, false);
     }
     
     // id is unlock in _send_empty_entries;
