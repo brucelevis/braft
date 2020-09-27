@@ -29,6 +29,8 @@
 #include "braft/log_entry.h"                     // LogEntry
 #include "braft/snapshot_throttle.h"             // SnapshotThrottle
 
+#include "butil/endpoint.h"
+
 namespace braft {
 
 DEFINE_int32(raft_max_entries_size, 1024,
@@ -108,15 +110,23 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
         LOG(ERROR) << "Invalid arguments, group " << options.group_id;
         return -1;
     }
+
     Replicator* r = new Replicator();
-    brpc::ChannelOptions channel_opt;
-    //channel_opt.connect_timeout_ms = *options.heartbeat_timeout_ms;
-    channel_opt.timeout_ms = -1; // We don't need RPC timeout
-    if (r->_sending_channel.Init(options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
-        LOG(ERROR) << "Fail to init sending channel"
-                   << ", group " << options.group_id;
-        delete r;
-        return -1;
+
+    //befor channel init, do one shot dns
+    butil::EndPoint point;
+    bool dns_ok = butil::hostname2endpoint(options.peer_id.addr.to_string().c_str(), &point) == 0;
+
+    if (dns_ok) {
+        brpc::ChannelOptions channel_opt;
+        //channel_opt.connect_timeout_ms = *options.heartbeat_timeout_ms;
+        channel_opt.timeout_ms = -1; // We don't need RPC timeout
+        if (r->_sending_channel.Init(options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
+            LOG(ERROR) << "Fail to init sending channel"
+                << ", group " << options.group_id;
+            delete r;
+            return -1;
+        }
     }
 
     r->_options = options;
@@ -966,6 +976,18 @@ void* Replicator::_send_heartbeat(void* arg) {
         // This replicator is stopped
         return NULL;
     }
+
+    butil::EndPoint point;
+    bool dns_ok = butil::hostname2endpoint(r->_options.peer_id.addr.to_string().c_str(), &point) == 0;
+    if (!dns_ok) {
+        brpc::ChannelOptions channel_opt;
+        channel_opt.timeout_ms = -1; // We don't need RPC timeout
+        if (r->_sending_channel.Init(r->_options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
+            LOG(INFO) << "Replicator::_send_heartbeat " << r->_options.peer_id.addr.to_string();
+            return NULL;
+        }
+    }
+
     // id is unlock in _send_empty_entries;
     r->_send_empty_entries(true);
     return NULL;
