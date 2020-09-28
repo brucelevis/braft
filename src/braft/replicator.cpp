@@ -306,6 +306,9 @@ void Replicator::_on_heartbeat_returned(
         ss << " fail, sleep.";
         BRAFT_VLOG << ss.str();
 
+        //channel reinit
+        r->_channel_init_ok = false;
+
         // TODO: Should it be VLOG?
         LOG_IF(WARNING, (r->_consecutive_error_times++) % 10 == 0)
                         << "Group " << r->_options.group_id
@@ -986,6 +989,7 @@ void* Replicator::_send_heartbeat(void* arg) {
     }
 
     if (!r->_channel_init_ok) {
+        r->_sending_channel.reset();
         brpc::ChannelOptions channel_opt;
         channel_opt.timeout_ms = -1; // We don't need RPC timeout
         if (r->_sending_channel.Init(r->_options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
