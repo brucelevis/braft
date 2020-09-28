@@ -154,12 +154,7 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
     r->_update_last_rpc_send_timestamp(butil::monotonic_time_ms());
     r->_start_heartbeat_timer(butil::gettimeofday_us());
     // Note: r->_id is unlock in _send_empty_entries, don't touch r ever after
-    if (dns_ok) {
-        r->_send_empty_entries(false);
-    } else {
-        CHECK_EQ(0, bthread_id_unlock(r->_id)) << "Fail to unlock " << r->_id;
-    }
-    
+    r->_send_empty_entries(false);
     return 0;
 }
 
@@ -408,6 +403,9 @@ void Replicator::_on_rpc_returned(ReplicatorId id, brpc::Controller* cntl,
     if (cntl->Failed()) {
         ss << " fail, sleep.";
         BRAFT_VLOG << ss.str();
+
+        //channel reinit
+        r->_channel_init_ok = false;
 
         // TODO: Should it be VLOG?
         LOG_IF(WARNING, (r->_consecutive_error_times++) % 10 == 0)
@@ -998,7 +996,6 @@ void* Replicator::_send_heartbeat(void* arg) {
             return NULL;
         }
         r->_channel_init_ok = true;
-        r->_send_empty_entries(false, false);
     }
     
     // id is unlock in _send_empty_entries;
