@@ -119,6 +119,8 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
         return -1;
     }
 
+    LOG(INFO) << "init sending channel succeed";
+
     r->_options = options;
     r->_next_index = r->_options.log_manager->last_log_index() + 1;
     if (bthread_id_create(&r->_id, r, _on_error) != 0) {

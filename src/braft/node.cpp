@@ -1804,8 +1804,17 @@ void NodeImpl::become_leader() {
         BRAFT_VLOG << "node " << _group_id << ":" << _server_id
                    << " term " << _current_term
                    << " add replicator " << *iter;
+
+        LOG(INFO) << "become_leader begin to add_replicator for node " << _group_id << ":" << _server_id
+                   << " term " << _current_term
+                   << " add replicator " << *iter;                   
         //TODO: check return code
-        _replicator_group.add_replicator(*iter);
+        int retc = _replicator_group.add_replicator(*iter);
+
+        LOG(INFO) << "become_leader after add_replicator for node " << _group_id << ":" << _server_id
+                   << " term " << _current_term
+                   << " add replicator " << *iter
+                   << " return code:" << retc;        
     }
 
     // init commit manager
@@ -3032,11 +3041,13 @@ void NodeImpl::ConfigurationCtx::start(const Configuration& old_conf,
     adding.list_peers(&_adding_peers);
     for (std::set<PeerId>::const_iterator iter
             = _adding_peers.begin(); iter != _adding_peers.end(); ++iter) {
+        LOG(INFO) << "begin to add_replicator for add peer:" << *iter;    
         if (_node->_replicator_group.add_replicator(*iter) != 0) {
             LOG(ERROR) << "node " << _node->node_id()
                        << " start replicator failed, peer " << *iter;
             return on_caughtup(_version, *iter, false);
         }
+        LOG(INFO) << "after add_replicator for add peer:" << *iter;  
         OnCaughtUp* caught_up = new OnCaughtUp(
                 _node, _node->_current_term, *iter, _version);
         timespec due_time = butil::milliseconds_from_now(
