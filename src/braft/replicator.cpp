@@ -87,6 +87,7 @@ Replicator::Replicator()
     _heartbeat_in_fly.value = 0;
     _timeout_now_in_fly.value = 0;
     memset(&_st, 0, sizeof(_st));
+    memset(&_options, 0, sizeof(_options));
 }
 
 Replicator::~Replicator() {
