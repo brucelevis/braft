@@ -29,8 +29,6 @@
 #include "braft/log_entry.h"                     // LogEntry
 #include "braft/snapshot_throttle.h"             // SnapshotThrottle
 
-#include "butil/endpoint.h"
-
 namespace braft {
 
 DEFINE_int32(raft_max_entries_size, 1024,
@@ -84,7 +82,6 @@ Replicator::Replicator()
     , _is_waiter_canceled(false)
     , _reader(NULL)
     , _catchup_closure(NULL)
-    , _channel_init_ok(false)
 {
     _install_snapshot_in_fly.value = 0;
     _heartbeat_in_fly.value = 0;
@@ -111,24 +108,15 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
         LOG(ERROR) << "Invalid arguments, group " << options.group_id;
         return -1;
     }
-
     Replicator* r = new Replicator();
-
-    //befor channel init, do one shot dns
-    butil::EndPoint point;
-    bool dns_ok = butil::hostname2endpoint(options.peer_id.addr.to_string().c_str(), &point) == 0;
-    LOG(INFO) << "Replicator::start dns_ok " << dns_ok;
-    if (dns_ok) {
-        brpc::ChannelOptions channel_opt;
-        //channel_opt.connect_timeout_ms = *options.heartbeat_timeout_ms;
-        channel_opt.timeout_ms = -1; // We don't need RPC timeout
-        if (r->_sending_channel.Init(options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
-            LOG(ERROR) << "Fail to init sending channel"
-                << ", group " << options.group_id;
-            delete r;
-            return -1;
-        }
-        r->_channel_init_ok = true;
+    brpc::ChannelOptions channel_opt;
+    //channel_opt.connect_timeout_ms = *options.heartbeat_timeout_ms;
+    channel_opt.timeout_ms = -1; // We don't need RPC timeout
+    if (r->_sending_channel.Init(options.peer_id.addr.to_string().c_str(), "rr", &channel_opt) != 0) {
+        LOG(ERROR) << "Fail to init sending channel"
+                   << ", group " << options.group_id;
+        delete r;
+        return -1;
     }
 
     r->_options = options;
@@ -302,9 +290,6 @@ void Replicator::_on_heartbeat_returned(
         ss << " fail, sleep.";
         BRAFT_VLOG << ss.str();
 
-        //channel reinit
-        r->_channel_init_ok = false;
-
         // TODO: Should it be VLOG?
         LOG_IF(WARNING, (r->_consecutive_error_times++) % 10 == 0)
                         << "Group " << r->_options.group_id
@@ -404,9 +389,6 @@ void Replicator::_on_rpc_returned(ReplicatorId id, brpc::Controller* cntl,
     if (cntl->Failed()) {
         ss << " fail, sleep.";
         BRAFT_VLOG << ss.str();
-
-        //channel reinit
-        r->_channel_init_ok = false;
 
         // TODO: Should it be VLOG?
         LOG_IF(WARNING, (r->_consecutive_error_times++) % 10 == 0)
@@ -560,7 +542,7 @@ int Replicator::_fill_common_fields(AppendEntriesRequest* request,
     return 0;
 }
 
-void Replicator::_send_empty_entries(bool is_heartbeat, bool unlock) {
+void Replicator::_send_empty_entries(bool is_heartbeat) {
     std::unique_ptr<brpc::Controller> cntl(new brpc::Controller);
     std::unique_ptr<AppendEntriesRequest> request(new AppendEntriesRequest);
     std::unique_ptr<AppendEntriesResponse> response(new AppendEntriesResponse);
@@ -591,24 +573,15 @@ void Replicator::_send_empty_entries(bool is_heartbeat, bool unlock) {
         << " prev_log_index " << request->prev_log_index()
         << " last_committed_index " << request->committed_index();
 
-
-    
     google::protobuf::Closure* done = brpc::NewCallback(
-            is_heartbeat ? _on_heartbeat_returned : _on_rpc_returned, 
-            _id.value, cntl.get(), request.get(), response.get(),
-            butil::monotonic_time_ms());
+                is_heartbeat ? _on_heartbeat_returned : _on_rpc_returned, 
+                _id.value, cntl.get(), request.get(), response.get(),
+                butil::monotonic_time_ms());
 
-    if (_channel_init_ok) {
-        RaftService_Stub stub(&_sending_channel);
-        stub.append_entries(cntl.release(), request.release(), 
-                            response.release(), done);
-    } else {
-        done->Run();
-    }
-    
-    if (unlock) {
-        CHECK_EQ(0, bthread_id_unlock(_id)) << "Fail to unlock " << _id;
-    }
+    RaftService_Stub stub(&_sending_channel);
+    stub.append_entries(cntl.release(), request.release(), 
+                        response.release(), done);
+    CHECK_EQ(0, bthread_id_unlock(_id)) << "Fail to unlock " << _id;
 }
 
 int Replicator::_prepare_entry(int offset, EntryMeta* em, butil::IOBuf *data) {
@@ -993,23 +966,6 @@ void* Replicator::_send_heartbeat(void* arg) {
         // This replicator is stopped
         return NULL;
     }
-
-    butil::EndPoint point;
-    bool dns_ok = butil::hostname2endpoint(r->_options.peer_id.addr.to_string().c_str(), &point) == 0;
-    //LOG(INFO) << "Replicator::_send_heartbeat dns_ok " << dns_ok;
-    if (!dns_ok || !r->_channel_init_ok) {
-        r->_sending_channel.reset();
-        brpc::ChannelOptions channel_opt;
-        channel_opt.timeout_ms = -1; // We don't need RPC timeout
-        if (r->_sending_channel.Init(r->_options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
-            LOG(INFO) << "Replicator::_send_heartbeat " << r->_options.peer_id.addr.to_string();
-            r->_channel_init_ok = false;
-            CHECK_EQ(0, bthread_id_unlock(r->_id)) << "Fail to unlock " << r->_id;
-            return NULL;
-        }
-        r->_channel_init_ok = true;
-    }
-    
     // id is unlock in _send_empty_entries;
     r->_send_empty_entries(true);
     return NULL;
