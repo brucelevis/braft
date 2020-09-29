@@ -993,12 +993,15 @@ void* Replicator::_send_heartbeat(void* arg) {
         return NULL;
     }
 
-    if (!r->_channel_init_ok) {
+    butil::EndPoint point;
+    bool dns_ok = butil::hostname2endpoint(r->_options.peer_id.addr.to_string().c_str(), &point) == 0;
+    if (!dns_ok) {
         r->_sending_channel.reset();
         brpc::ChannelOptions channel_opt;
         channel_opt.timeout_ms = -1; // We don't need RPC timeout
         if (r->_sending_channel.Init(r->_options.peer_id.addr.to_string().c_str(), &channel_opt) != 0) {
             LOG(INFO) << "Replicator::_send_heartbeat " << r->_options.peer_id.addr.to_string();
+            r->_channel_init_ok = false;
             CHECK_EQ(0, bthread_id_unlock(r->_id)) << "Fail to unlock " << r->_id;
             return NULL;
         }
