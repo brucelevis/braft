@@ -591,15 +591,18 @@ void Replicator::_send_empty_entries(bool is_heartbeat, bool unlock) {
         << " last_committed_index " << request->committed_index();
 
 
-    if (_channel_init_ok) {
-        google::protobuf::Closure* done = brpc::NewCallback(
-                is_heartbeat ? _on_heartbeat_returned : _on_rpc_returned, 
-                _id.value, cntl.get(), request.get(), response.get(),
-                butil::monotonic_time_ms());
+    
+    google::protobuf::Closure* done = brpc::NewCallback(
+            is_heartbeat ? _on_heartbeat_returned : _on_rpc_returned, 
+            _id.value, cntl.get(), request.get(), response.get(),
+            butil::monotonic_time_ms());
 
+    if (_channel_init_ok) {
         RaftService_Stub stub(&_sending_channel);
         stub.append_entries(cntl.release(), request.release(), 
                             response.release(), done);
+    } else {
+        done->Run();
     }
     
     if (unlock) {
