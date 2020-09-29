@@ -791,6 +791,7 @@ void NodeImpl::handle_stepdown_timeout() {
 void NodeImpl::unsafe_register_conf_change(const Configuration& old_conf,
                                            const Configuration& new_conf,
                                            Closure* done) {
+    LOG(INFO) << "unsafe_register_conf_change,_state: " << _state;                                           
     if (_state != STATE_LEADER) {
         LOG(WARNING) << "[" << node_id()
                      << "] Refusing configuration changing because the state is "
@@ -806,6 +807,9 @@ void NodeImpl::unsafe_register_conf_change(const Configuration& old_conf,
         return;
     }
 
+
+    LOG(INFO) << "unsafe_register_conf_change,_conf_ctx.is_busy: " << _conf_ctx.is_busy();                                           
+
     // check concurrent conf change
     if (_conf_ctx.is_busy()) {
         LOG(WARNING) << "[" << node_id()
@@ -819,9 +823,12 @@ void NodeImpl::unsafe_register_conf_change(const Configuration& old_conf,
 
     // Return immediately when the new peers equals to current configuration
     if (_conf.conf.equals(new_conf)) {
+        LOG(INFO) << "unsafe_register_conf_change,no conf changed, conf: " << new_conf;
         run_closure_in_bthread(done);
         return;
     }
+
+    LOG(INFO) << "unsafe_register_conf_change,conf changed, conf: " << new_conf;
 
     return _conf_ctx.start(old_conf, new_conf, done);
 }
@@ -3031,6 +3038,8 @@ void NodeImpl::ConfigurationCtx::start(const Configuration& old_conf,
     ss << "node " << _node->_group_id << ":" << _node->_server_id
        << " change_peers from " << old_conf << " to " << new_conf;
 
+   LOG(INFO) << "ConfigurationCtx::start,adding empty: " << adding.empty();
+
     if (adding.empty()) {
         ss << ", begin removing.";
         LOG(INFO) << ss.str();
@@ -3060,6 +3069,8 @@ void NodeImpl::ConfigurationCtx::start(const Configuration& old_conf,
             return on_caughtup(_version, *iter, false);
         }
     }
+            
+    LOG(INFO) << "ConfigurationCtx::start, end";
 }
 
 void NodeImpl::ConfigurationCtx::flush(const Configuration& conf,

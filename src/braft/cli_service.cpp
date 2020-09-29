@@ -42,6 +42,8 @@ static void add_peer_returned(brpc::Controller* cntl,
             already_exists = true;
         }
     }
+    
+    LOG(INFO) << "add_peer_returned,already_exists: " << already_exists;
     if (!already_exists) {
         response->add_new_peers(request->peer_id());
     }
