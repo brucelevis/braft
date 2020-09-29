@@ -846,10 +846,13 @@ butil::Status NodeImpl::list_peers(std::vector<PeerId>* peers) {
 
 void NodeImpl::add_peer(const PeerId& peer, Closure* done) {
     BAIDU_SCOPED_LOCK(_mutex);
+    LOG(INFO) << "NodeImpl::add_peer, new peer: " << peer;
     if (_server_id != peer && _conf.conf.contains(peer)) {
+        LOG(INFO) << "NodeImpl::add_peer, exists, remove";
         remove_peer(peer, NULL);
     }
 
+    LOG(INFO) << "NodeImpl::add_peer, exists, remove, add";
     Configuration new_conf = _conf.conf;
     new_conf.add_peer(peer);
     return unsafe_register_conf_change(_conf.conf, new_conf, done);
