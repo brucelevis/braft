@@ -117,6 +117,7 @@ int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
     //befor channel init, do one shot dns
     butil::EndPoint point;
     bool dns_ok = butil::hostname2endpoint(options.peer_id.addr.to_string().c_str(), &point) == 0;
+    LOG(INFO) << "Replicator::start dns_ok " << dns_ok;
     if (dns_ok) {
         brpc::ChannelOptions channel_opt;
         //channel_opt.connect_timeout_ms = *options.heartbeat_timeout_ms;
@@ -995,6 +996,7 @@ void* Replicator::_send_heartbeat(void* arg) {
 
     butil::EndPoint point;
     bool dns_ok = butil::hostname2endpoint(r->_options.peer_id.addr.to_string().c_str(), &point) == 0;
+    LOG(INFO) << "Replicator::_send_heartbeat dns_ok " << dns_ok;
     if (!dns_ok) {
         r->_sending_channel.reset();
         brpc::ChannelOptions channel_opt;
