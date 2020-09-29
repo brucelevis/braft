@@ -849,7 +849,10 @@ void NodeImpl::add_peer(const PeerId& peer, Closure* done) {
     LOG(INFO) << "NodeImpl::add_peer, new peer: " << peer;
     if (_server_id != peer && _conf.conf.contains(peer)) {
         LOG(INFO) << "NodeImpl::add_peer, exists, remove";
-        remove_peer(peer, NULL);
+        Configuration new_conf = _conf.conf;
+        new_conf.remove_peer(peer);
+        
+        unsafe_register_conf_change(_conf.conf, new_conf, NULL);
     }
 
     LOG(INFO) << "NodeImpl::add_peer, exists, remove, add";
