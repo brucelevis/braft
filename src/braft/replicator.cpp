@@ -97,9 +97,13 @@ Replicator::~Replicator() {
         _options.node->Release();
         _options.node = NULL;
     }
+    
+    LOG(INFO) << "before release replicator_status in ~Replicator, replicator_status:" << _options.replicator_status;
     if (_options.replicator_status) {
         _options.replicator_status->Release();
     }
+    LOG(INFO) << "after release replicator_status in ~Replicator, replicator_status:" << _options.replicator_status;
+    
 }
 
 int Replicator::start(const ReplicatorOptions& options, ReplicatorId *id) {
