@@ -824,7 +824,9 @@ void NodeImpl::unsafe_register_conf_change(const Configuration& old_conf,
     // Return immediately when the new peers equals to current configuration
     if (_conf.conf.equals(new_conf)) {
         LOG(INFO) << "unsafe_register_conf_change,no conf changed, conf: " << new_conf;
-        run_closure_in_bthread(done);
+        if (done) {
+            run_closure_in_bthread(done);
+        }
         return;
     }
 
@@ -844,6 +846,10 @@ butil::Status NodeImpl::list_peers(std::vector<PeerId>* peers) {
 
 void NodeImpl::add_peer(const PeerId& peer, Closure* done) {
     BAIDU_SCOPED_LOCK(_mutex);
+    if (_server_id != peer && _conf.conf.contains(peer)) {
+        remove_peer(peer, NULL);
+    }
+
     Configuration new_conf = _conf.conf;
     new_conf.add_peer(peer);
     return unsafe_register_conf_change(_conf.conf, new_conf, done);
