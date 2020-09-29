@@ -996,8 +996,8 @@ void* Replicator::_send_heartbeat(void* arg) {
 
     butil::EndPoint point;
     bool dns_ok = butil::hostname2endpoint(r->_options.peer_id.addr.to_string().c_str(), &point) == 0;
-    LOG(INFO) << "Replicator::_send_heartbeat dns_ok " << dns_ok;
-    if (!dns_ok) {
+    //LOG(INFO) << "Replicator::_send_heartbeat dns_ok " << dns_ok;
+    if (!dns_ok || !r->_channel_init_ok) {
         r->_sending_channel.reset();
         brpc::ChannelOptions channel_opt;
         channel_opt.timeout_ms = -1; // We don't need RPC timeout
